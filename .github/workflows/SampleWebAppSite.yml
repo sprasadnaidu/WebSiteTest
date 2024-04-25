@@ -9,7 +9,7 @@ env:
   OCTOPUS_SPACE: Default
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: Windows-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
