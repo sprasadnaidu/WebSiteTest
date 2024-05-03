@@ -5,10 +5,10 @@ on:
     - main
 env:
   AZURE_WEBAPP_NAME: SampleWebAppSite
-  AZURE_WEBAPP_PACKAGE_PATH: .\published
+  AZURE_WEBAPP_PACKAGE_PATH: WebSiteTest\published
   CONFIGURATION: Release
   DOTNET_CORE_VERSION: 8.0.x
-  WORKING_DIRECTORY: ''
+  WORKING_DIRECTORY: WebSiteTest
 jobs:
   build:
     runs-on: windows-latest
@@ -44,5 +44,5 @@ jobs:
       uses: azure/webapps-deploy@v2
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME }}
-        publish-profile: ${{ secrets.SampleWebAppSite_AE01 }}
+        publish-profile: ${{ secrets.SampleWebAppSite_3975 }}
         package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
