@@ -1,51 +1,61 @@
-name: Build and deploy .NET Core application to Web App SampleWebAppSite
+name: Build and Deploy
 on:
   push:
     branches:
-    - main
+      - main
 env:
-  AZURE_WEBAPP_NAME: SampleWebAppSite
-  AZURE_WEBAPP_PACKAGE_PATH: WebSiteTest\published
-  CONFIGURATION: Release
-  DOTNET_CORE_VERSION: 8.0.x
-  WORKING_DIRECTORY: WebSiteTest
+  OCTOPUS_URL: 'https://cic.octopus.app'
+  OCTOPUS_API_KEY: ${{ secrets.OCTOPUS_API_KEY }}
+  OCTOPUS_SPACE: Default
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
-    - name: Restore
-      run: dotnet restore "${{ env.WORKING_DIRECTORY }}"
-    - name: Build
-      run: dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
-    - name: Test
-      run: dotnet test "${{ env.WORKING_DIRECTORY }}" --no-build
-    - name: Publish
-      run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
-    - name: Publish Artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: webapp
-        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
-  deploy:
-    runs-on: windows-latest
-    needs: build
-    steps:
-    - name: Download artifact from build job
-      uses: actions/download-artifact@v3
-      with:
-        name: webapp
-        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
-    - name: Deploy to Azure WebApp
-      uses: azure/webapps-deploy@v2
-      with:
-        app-name: ${{ env.AZURE_WEBAPP_NAME }}
-        publish-profile: ${{ secrets.SampleWebAppSite_E3B1 }}
-        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
-
-
-
+      - name: Checkout code.
+        uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: "8.0"
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+      - name: Publish
+        run: dotnet publish -c Release -o ./publish
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: my-dotnet-artifacts
+          path: ./publish
+      - name: Create ZIP package
+        run: |
+          cd ./publish
+          zip -r WebSiteTestPublishPack1.0.1.zip .
+          mv WebSiteTestPublishPack1.0.1.zip ../WebSiteTestPublishPack1.0.1.zip
+      - name: Install Octopus CLI 🐙
+        uses: OctopusDeploy/install-octopus-cli-action@v3
+        with:
+          version: "*"
+      - name: Push build information to Octopus Deploy 🐙
+        uses: OctopusDeploy/push-build-information-action@v3
+        with:
+          packages: |
+            'my-dotnet-artifacts'
+          version: 1.0.1
+      - name: Push a package to Octopus Deploy 🐙
+        uses: OctopusDeploy/push-package-action@v3
+        with:
+          packages: WebSiteTestPublishPack1.0.1.zip
+          overwrite_mode: OverwriteExisting
+      - name: Create a release in Octopus Deploy 🐙
+        uses: OctopusDeploy/create-release-action@v3
+        with:
+          project: 'CICProject'
+          release_number: '1.1.0'
+      - name: Deploy a release in Octopus Deploy 🐙
+        uses: OctopusDeploy/deploy-release-action@v3
+        with:
+          project: 'CICProject'
+          release_number: '1.1.0'
+          environments: 'QA'
